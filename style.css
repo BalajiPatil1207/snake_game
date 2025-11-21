@@ -187,6 +187,30 @@ body {
     box-shadow: 0 0 10px #ff4a4a, inset 0 0 6px #700;
 }
 
+.big-apple {
+    background: orange !important;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(255, 165, 0, 0.8);
+}
+
+.golden-apple {
+    background: linear-gradient(45deg, #fff176, #ffd700) !important;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.9);
+}
+
+.speed-fruit {
+    background: linear-gradient(180deg, #ff8a00, #ff5722) !important;
+    border-radius: 6px;
+    box-shadow: 0 0 8px rgba(255, 120, 0, 0.7);
+}
+
+.freeze-fruit {
+    background: linear-gradient(180deg, #8fd3ff, #4aa3ff) !important;
+    border-radius: 6px;
+    box-shadow: 0 0 8px rgba(100, 180, 255, 0.7);
+}
+
 /* ----------------------------------------------------------
    BOOM (Bomb) Style – Matches your theme + existing blocks
 -----------------------------------------------------------*/
@@ -201,8 +225,15 @@ body {
 
 /* Bomb blinking animation */
 @keyframes bombBlink {
-    0% { box-shadow: 0 0 10px red; transform: scale(1); }
-    100% { box-shadow: 0 0 22px red; transform: scale(1.15); }
+    0% {
+        box-shadow: 0 0 10px red;
+        transform: scale(1);
+    }
+
+    100% {
+        box-shadow: 0 0 22px red;
+        transform: scale(1.15);
+    }
 }
 
 
@@ -226,9 +257,20 @@ body {
 }
 
 @keyframes warnFade {
-    0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
-    20% { opacity: 1; transform: translateX(-50%) scale(1); }
-    100% { opacity: 0; transform: translateX(-50%) scale(1.1); }
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.6);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) scale(1.1);
+    }
 }
 
 
@@ -240,12 +282,29 @@ body {
 }
 
 @keyframes shakeAnim {
-    0% { transform: translate(0px, 0px); }
-    20% { transform: translate(-5px, 3px); }
-    40% { transform: translate(5px, -3px); }
-    60% { transform: translate(-5px, -3px); }
-    80% { transform: translate(5px, 3px); }
-    100% { transform: translate(0px, 0px); }
+    0% {
+        transform: translate(0px, 0px);
+    }
+
+    20% {
+        transform: translate(-5px, 3px);
+    }
+
+    40% {
+        transform: translate(5px, -3px);
+    }
+
+    60% {
+        transform: translate(-5px, -3px);
+    }
+
+    80% {
+        transform: translate(5px, 3px);
+    }
+
+    100% {
+        transform: translate(0px, 0px);
+    }
 }
 
 
@@ -263,9 +322,20 @@ body {
 }
 
 @keyframes explode {
-    0% { opacity: 1; transform: scale(0.2); }
-    60% { opacity: 0.9; transform: scale(2.5); }
-    100% { opacity: 0; transform: scale(3.5); }
+    0% {
+        opacity: 1;
+        transform: scale(0.2);
+    }
+
+    60% {
+        opacity: 0.9;
+        transform: scale(2.5);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(3.5);
+    }
 }
 
 
@@ -273,8 +343,13 @@ body {
 
 /* Glow Animation */
 @keyframes appleGlow {
-    0% { box-shadow: 0 0 6px #ff4d4d, inset 0 0 6px #990000; }
-    100% { box-shadow: 0 0 12px #ff7777, inset 0 0 10px #660000; }
+    0% {
+        box-shadow: 0 0 6px #ff4d4d, inset 0 0 6px #990000;
+    }
+
+    100% {
+        box-shadow: 0 0 12px #ff7777, inset 0 0 10px #660000;
+    }
 }
 
 
@@ -317,45 +392,47 @@ body {
 /* mobile controls */
 /* Mobile controls - hidden on desktop, visible on small screens */
 .mobile-controls.controls {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 18px;
-  display: none;          /* hidden by default for desktop */
-  gap: 10px;
-  align-items: center;
-  justify-content: center;
-  z-index: 60;
-  user-select: none;
-  touch-action: none;     /* prevent scrolling while pressing */
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 18px;
+    display: none;
+    /* hidden by default for desktop */
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+    user-select: none;
+    touch-action: none;
+    /* prevent scrolling while pressing */
 }
 
 .mobile-controls.controls button {
-  width: 56px;
-  height: 56px;
-  border-radius: 10px;
-  border: none;
-  font-size: 22px;
-  background: rgba(0,0,0,0.55);
-  color: white;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.25);
-  -webkit-tap-highlight-color: transparent;
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    border: none;
+    font-size: 22px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* layout for left-right row inside controls */
 .mobile-controls .left-right {
-  display: inline-flex;
-  gap: 8px;
+    display: inline-flex;
+    gap: 8px;
 }
 
 /* active state for immediate feedback */
 .mobile-controls button:active,
 .mobile-controls button.active {
-  transform: scale(0.96);
-  filter: brightness(1.15);
+    transform: scale(0.96);
+    filter: brightness(1.15);
 }
 
 
@@ -387,27 +464,27 @@ body {
 
 /* Show on mobile screens */
 @media (max-width: 680px) {
-  #mobileControls {
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    margin-top: 15px;
-  }
+    #mobileControls {
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
 
-  #mobileControls button {
-    font-size: 28px;
-    padding: 12px 18px;
-    border-radius: 10px;
-    border: none;
-    background: #333;
-    color: white;
-  }
+    #mobileControls button {
+        font-size: 28px;
+        padding: 12px 18px;
+        border-radius: 10px;
+        border: none;
+        background: #333;
+        color: white;
+    }
 
-  #mobileControls .left-right {
-    display: flex;
-    gap: 15px;
-  }
+    #mobileControls .left-right {
+        display: flex;
+        gap: 15px;
+    }
 }
 
 
