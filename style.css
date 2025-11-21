@@ -385,28 +385,31 @@ body {
     margin-top: 12px;
 }
 
-/* small screens */
+/* Show on mobile screens */
 @media (max-width: 680px) {
-    #game-board {
-        height: 100vw;
-        max-height: 520px;
-    }
-    
-    .controls {
-        display: flex !important;
-    }
-     .block {
-        border-width: 0.3px;    /* thin lines, cleaner */
-    }
-    .nav {
-        display: flex;
-        justify-content: space-evenly;
-    }
-    .controls-row {
-        display: flex;
-        justify-content: space-evenly;
-    }
+  #mobileControls {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+  }
+
+  #mobileControls button {
+    font-size: 28px;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: none;
+    background: #333;
+    color: white;
+  }
+
+  #mobileControls .left-right {
+    display: flex;
+    gap: 15px;
+  }
 }
+
 
 .hidden {
     display: none;
