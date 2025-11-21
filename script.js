@@ -324,14 +324,14 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// --- MOBILE / TOUCH CONTROLS ---
+// --- MOBILE / TOUCH CONTROLS (robust) ---
 (function() {
   const mobileControls = document.getElementById('mobileControls');
   if (!mobileControls) return;
 
   const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
 
-  // helper: try to set direction safely (prevent reverse)
+  // helper: set direction safely (prevent reverse)
   function trySetDirection(newDir) {
     // don't allow reversing directly
     if (!started || paused) return;
@@ -339,35 +339,41 @@ document.addEventListener('keydown', (e) => {
     direction = newDir;
   }
 
-  // pointer events work for mouse + touch + stylus
+  // pointerdown is best for touch + mouse; fallback to touchstart for older browsers
   mobileControls.querySelectorAll('button[data-direction]').forEach(btn => {
-    // prevent page scroll / selection while touching controls
-    btn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      const dir = btn.dataset.direction;
+    const dir = btn.dataset.direction;
+
+    function onPointerDown(e) {
+      // stop page from scrolling on mobile while pressing
+      if (e.cancelable) e.preventDefault();
       trySetDirection(dir);
-
-      // visual active class
       btn.classList.add('active');
-    }, { passive: false });
+    }
 
-    // on pointerup / leave remove visual state
-    const removeActive = () => btn.classList.remove('active');
+    function removeActive() { btn.classList.remove('active'); }
+
+    // Use pointer events when available
+    btn.addEventListener('pointerdown', onPointerDown, { passive: false });
     btn.addEventListener('pointerup', removeActive);
     btn.addEventListener('pointercancel', removeActive);
     btn.addEventListener('pointerleave', removeActive);
 
-    // also support click as fallback
-    btn.addEventListener('click', (e) => {
+    // Touch fallback for old devices
+    btn.addEventListener('touchstart', function(e) { onPointerDown(e); }, { passive: false });
+
+    // click fallback (keyboard / mouse)
+    btn.addEventListener('click', function(e) {
       e.preventDefault();
-      trySetDirection(btn.dataset.direction);
+      trySetDirection(dir);
+      // remove active in case pointer events didn't fire
+      setTimeout(removeActive, 120);
     });
   });
 
-  // Optional: hide mobile controls if viewport is large (JS fallback)
+  // JS fallback visibility: rely primarily on CSS but hide on large viewports
   function updateMobileVisibility() {
-    if (window.innerWidth <= 640) {
-      mobileControls.style.display = '';
+    if (window.innerWidth <= 680) {
+      mobileControls.style.display = ''; // defer to CSS media query
     } else {
       mobileControls.style.display = 'none';
     }
@@ -375,6 +381,7 @@ document.addEventListener('keydown', (e) => {
   window.addEventListener('resize', updateMobileVisibility);
   updateMobileVisibility();
 })();
+
 
 
 
