@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Snake Game — All Features</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-theme="dark">
+  <div class="game-container">
+    <header class="top">
+      <h1>Snake Game</h1>
+      <div class="theme-controls">
+        <select id="themeSelect">
+          <option value="dark">Dark</option>
+          <option value="neon">Neon</option>
+          <option value="retro">Retro</option>
+        </select>
+      </div>
+    </header>
+
+    <div class="nav">
+      <div class="padd-1207">Score: <span id="score">0</span></div>
+      <div class="padd-1207">Time: <span id="time">60</span></div>
+      <div class="padd-1207">High: <span id="highScore">0</span></div>
+    </div>
+
+    <div class="controls-row">
+      <button id="start-button" class="btn">Start Game</button>
+      <button id="pause-button" class="btn">Pause</button>
+    </div>
+
+    <div id="game-board" aria-label="Game board"></div>
+
+    <div class="mobile-controls controls" id="mobileControls">
+      <button data-direction="up">⬆️</button>
+      <div class="left-right">
+        <button data-direction="left">⬅️</button>
+        <button data-direction="right">➡️</button>
+      </div>
+      <button data-direction="down">⬇️</button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="modalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal">
+      <h2>Game Over</h2>
+      <p>Your score: <span id="finalScore">0</span></p>
+      <p>High score: <span id="finalHigh">0</span></p>
+      <div class="modal-actions">
+        <button id="restartBtn" class="btn">Restart</button>
+        <button id="closeBtn" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
