@@ -222,7 +222,7 @@ function startGame() {
   paused = false;
 
   timeLeft = 0;
-  speed = 600;
+  speed = 400;
   scoreDisplay.textContent = '0';
 
   setupGrid();
