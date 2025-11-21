@@ -324,6 +324,59 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// --- MOBILE / TOUCH CONTROLS ---
+(function() {
+  const mobileControls = document.getElementById('mobileControls');
+  if (!mobileControls) return;
+
+  const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
+
+  // helper: try to set direction safely (prevent reverse)
+  function trySetDirection(newDir) {
+    // don't allow reversing directly
+    if (!started || paused) return;
+    if (opposite[newDir] === direction) return;
+    direction = newDir;
+  }
+
+  // pointer events work for mouse + touch + stylus
+  mobileControls.querySelectorAll('button[data-direction]').forEach(btn => {
+    // prevent page scroll / selection while touching controls
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const dir = btn.dataset.direction;
+      trySetDirection(dir);
+
+      // visual active class
+      btn.classList.add('active');
+    }, { passive: false });
+
+    // on pointerup / leave remove visual state
+    const removeActive = () => btn.classList.remove('active');
+    btn.addEventListener('pointerup', removeActive);
+    btn.addEventListener('pointercancel', removeActive);
+    btn.addEventListener('pointerleave', removeActive);
+
+    // also support click as fallback
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      trySetDirection(btn.dataset.direction);
+    });
+  });
+
+  // Optional: hide mobile controls if viewport is large (JS fallback)
+  function updateMobileVisibility() {
+    if (window.innerWidth <= 640) {
+      mobileControls.style.display = '';
+    } else {
+      mobileControls.style.display = 'none';
+    }
+  }
+  window.addEventListener('resize', updateMobileVisibility);
+  updateMobileVisibility();
+})();
+
+
 
 // ------------------------------
 // DRAW BLOCKS
@@ -352,11 +405,6 @@ function draw() {
 function tickTime() {
   timeLeft++;
   timeDisplay.textContent = timeLeft;
-
-//   if (timeLeft <= 0) {
-//     playHitSound();
-//     endGame("Time");
-//   }
  }
 
 // ------------------------------
