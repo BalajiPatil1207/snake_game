@@ -138,7 +138,7 @@ function spawnGoldenFood() {
   );
   goldenFood = { x: gx, y: gy };
 
-  setTimeout(() => { goldenFood = null; draw(); }, 6000);
+  setTimeout(() => { goldenFood = null; draw(); }, 10000);
 }
 
 // ------------------------------
@@ -151,7 +151,7 @@ function spawnSpeedFruit() {
     sy = Math.floor(Math.random() * cols);
   } while (snake.some(s => s.x === sx && s.y === sy));
   speedFood = { x: sx, y: sy };
-  setTimeout(() => { speedFood = null; draw(); }, 5000);
+  setTimeout(() => { speedFood = null; draw(); }, 20000);
 }
 
 // ------------------------------
@@ -165,7 +165,7 @@ function spawnFreezeFruit() {
   } while (snake.some(s => s.x === fx && s.y === fy));
 
   freezeFood = { x: fx, y: fy };
-  setTimeout(() => { freezeFood = null; draw(); }, 5000);
+  setTimeout(() => { freezeFood = null; draw(); }, 15000);
 }
 
 // ------------------------------
