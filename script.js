@@ -15,6 +15,9 @@ const finalHighEl = document.getElementById('finalHigh');
 const restartBtn = document.getElementById('restartBtn');
 const closeBtn = document.getElementById('closeBtn');
 
+let highScore = parseInt(localStorage.getItem("snakeHighScore") || "0");
+highScoreDisplay.textContent = highScore;
+
 // backgrounds
 let bgMUsic = new Audio('sankeGame.mp3');
 
