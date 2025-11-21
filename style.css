@@ -391,9 +391,9 @@ body {
         height: 100vw;
         max-height: 520px;
     }
-
+    
     .controls {
-        display: flex;
+        display: flex !important;
     }
      .block {
         border-width: 0.3px;    /* thin lines, cleaner */
