@@ -174,7 +174,7 @@ body {
 }
 
 .header-mobile-btns {
-    display: flex !important;
+    display: flex;
     gap: 12px;
 }
 
