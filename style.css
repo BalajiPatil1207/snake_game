@@ -67,7 +67,7 @@ body {
 /* Base Layout */
 .game-wrapper {
     width: 100%;
-    max-width: 900px; /* Increased for desktop sidebar */
+    max-width: 1200px; /* Increased for wider Desktop play area */
     padding: 20px;
     z-index: 10;
 }
@@ -235,7 +235,7 @@ body {
 
 /* Sidebar (Desktop Only) */
 .sidebar {
-    width: 180px;
+    width: 200px;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -738,7 +738,9 @@ input:checked + .slider:before {
         gap: 16px;
     }
     .game-surface {
-        min-height: 300px; /* Prevent collapse */
+        min-height: 450px; /* Taller Board for Mobile */
+        aspect-ratio: 1 / 1.3;
+        max-height: 70dvh; /* Safety to prevent HUD overflow */
     }
     .desktop-only {
         display: none !important;
@@ -773,6 +775,7 @@ input:checked + .slider:before {
     .brand h1 { font-size: 1.25rem; }
     .glow-text { font-size: 2.5rem; }
     .hud-item .value { font-size: 1.1rem; }
+    .game-surface { min-height: 400px; }
 }
 
 .desktop-only { display: block; }
