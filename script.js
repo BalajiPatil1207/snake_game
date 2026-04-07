@@ -1,621 +1,415 @@
-// ------------------------------
-// Snake Game + Apple + Boom + POWER FRUITS (Golden + Speed + Freeze)
-// ------------------------------
+/**
+ * SNAKE PRO - Professional Gaming Logic
+ */
 
-// DOM refs
-const boardElement = document.getElementById('game-board');
-const scoreDisplay = document.getElementById('score');
-const timeDisplay = document.getElementById('time');
-const highScoreDisplay = document.getElementById('highScore');
-const startButton = document.getElementById('start-button');
-const pauseButton = document.getElementById('pause-button');
-const modalOverlay = document.getElementById('modalOverlay');
-const finalScoreEl = document.getElementById('finalScore');
-const finalHighEl = document.getElementById('finalHigh');
-const restartBtn = document.getElementById('restartBtn');
-const closeBtn = document.getElementById('closeBtn');
-
-let highScore = parseInt(localStorage.getItem("snakeHighScore") || "0");
-highScoreDisplay.textContent = highScore;
-
-// backgrounds
-let bgMUsic = new Audio('sankeGame.mp3');
-
-// game settings
-const BLOCK_PX = 30;
-let rows = 0, cols = 0;
-let blocks = {};
-let snake = [];
-let direction = 'right';
-let food = null;
-let boom = null;
-
-// POWER FRUITS
-let bigFood = null;       // 20 pts every 5 sec
-let goldenFood = null;    // 50 pts every 10 sec
-let speedFood = null;     // speed boost every 12 sec
-let freezeFood = null;    // freeze effect
-let bigFoodTimer = null;
-let goldenTimer = null;
-let speedBoostTimer = null;
-let freezeTimer = null;
-
-let gameInterval = null;
-let timeInterval = null;
-let boomInterval = null;
-let timeLeft = 0;
-let speed = 200;
-const SPEED_STEP = 12;
+// --- CONFIGURATION ---
+const BASE_SPEED = 200;
 const SPEED_MIN = 80;
-let started = false;
-let paused = false;
+const SPEED_STEP = 12;
+const GRID_SIZE_RATIO = 20; // Cells cross-axis
 
-// audio
+// --- STATE ---
+let gameState = {
+    started: false,
+    paused: false,
+    frozen: false,
+    score: 0,
+    highScore: parseInt(localStorage.getItem("snakeHighScore") || "0"),
+    speed: BASE_SPEED,
+    timeLeft: 0,
+    direction: 'right',
+    prevDirection: 'right',
+    snake: [],
+    food: { normal: null, big: null, golden: null, speed: null, freeze: null },
+    boom: null,
+    intervals: { main: null, time: null, boom: null, fruits: [] },
+    grid: { rows: 0, cols: 0, blocks: {} }
+};
+
+// --- DOM ELEMENTS ---
+const elements = {
+    board: document.getElementById('game-board'),
+    score: document.getElementById('score'),
+    time: document.getElementById('time'),
+    highScore: document.getElementById('highScore'),
+    startBtn: document.getElementById('start-button'),
+    pauseBtn: document.getElementById('pause-button'),
+    restartBtn: document.getElementById('restartBtn'),
+    closeBtn: document.getElementById('closeBtn'),
+    startOverlay: document.getElementById('start-overlay'),
+    pauseOverlay: document.getElementById('pause-overlay'),
+    modal: document.getElementById('modalOverlay'),
+    finalScore: document.getElementById('finalScore'),
+    finalHigh: document.getElementById('finalHigh')
+};
+
+// --- AUDIO SYSTEM ---
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 const audioCtx = AudioCtx ? new AudioCtx() : null;
+const bgMusic = new Audio('sankeGame.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
 
-function playTone(freq, type = 'sine', duration = 120, gain = 0.06) {
-  if (!audioCtx) return;
-  const o = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  o.type = type;
-  o.frequency.value = freq;
-  g.gain.value = gain;
-  o.connect(g); g.connect(audioCtx.destination);
-  o.start();
-  setTimeout(() => { o.stop(); o.disconnect(); g.disconnect(); }, duration);
+function playTone(freq, type = 'sine', duration = 120, gain = 0.05) {
+    if (!audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.value = gain;
+    o.connect(g).connect(audioCtx.destination);
+    o.start();
+    setTimeout(() => { o.stop(); o.disconnect(); g.disconnect(); }, duration);
 }
 
-function playEatSound() { playTone(760); playTone(980, 'sine', 80); }
-function playHitSound() { playTone(120, 'sawtooth', 220); }
-function playBoomSound() { playTone(80, 'square', 320, 0.18); }
+const sounds = {
+    eat: () => { playTone(700); playTone(900, 'sine', 80); },
+    hit: () => playTone(120, 'sawtooth', 250),
+    boom: () => playTone(80, 'square', 400, 0.15)
+};
 
-// ------------------------------
-// GRID
-// ------------------------------
+// --- GRID ENGINE ---
 function setupGrid() {
-  rows = Math.max(6, Math.floor(boardElement.clientHeight / BLOCK_PX));
-  cols = Math.max(6, Math.floor(boardElement.clientWidth / BLOCK_PX));
-  boardElement.style.gridTemplate = `repeat(${rows},1fr)/repeat(${cols},1fr)`;
+    const rect = elements.board.getBoundingClientRect();
+    const cellSize = rect.width / GRID_SIZE_RATIO;
+    gameState.grid.cols = GRID_SIZE_RATIO;
+    gameState.grid.rows = Math.floor(rect.height / cellSize);
+    
+    elements.board.style.gridTemplateColumns = `repeat(${gameState.grid.cols}, 1fr)`;
+    elements.board.style.gridTemplateRows = `repeat(${gameState.grid.rows}, 1fr)`;
+    
+    elements.board.innerHTML = "";
+    gameState.grid.blocks = {};
 
-  boardElement.innerHTML = "";
-  blocks = {};
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const el = document.createElement("div");
-      el.className = "block";
-      boardElement.appendChild(el);
-      blocks[`${r}-${c}`] = el;
+    for (let r = 0; r < gameState.grid.rows; r++) {
+        for (let c = 0; c < gameState.grid.cols; c++) {
+            const block = document.createElement("div");
+            block.className = "block";
+            elements.board.appendChild(block);
+            gameState.grid.blocks[`${r}-${c}`] = block;
+        }
     }
-  }
 }
 
-// ------------------------------
-// NORMAL FOOD
-// ------------------------------
-function spawnFood() {
-  let fx, fy;
-  do {
-    fx = Math.floor(Math.random() * rows);
-    fy = Math.floor(Math.random() * cols);
-  } while (
-    snake.some(s => s.x === fx && s.y === fy) ||
-    (boom && boom.x === fx && boom.y === fy)
-  );
-  food = { x: fx, y: fy };
-}
-
-// ------------------------------
-// BIG ORANGE FOOD (20 pts / 5 sec)
-// ------------------------------
-function spawnBigFood() {
-  let fx, fy;
-  do {
-    fx = Math.floor(Math.random() * rows);
-    fy = Math.floor(Math.random() * cols);
-  } while (
-    snake.some(s => s.x === fx && s.y === fy) ||
-    (food && food.x === fx && food.y === fy)
-  );
-  bigFood = { x: fx, y: fy };
-
-  // auto remove in 5 sec
-  setTimeout(() => { bigFood = null; draw(); }, 5000);
-}
-
-// ------------------------------
-// GOLDEN APPLE (50 pts / 10 sec)
-// ------------------------------
-function spawnGoldenFood() {
-  let gx, gy;
-  do {
-    gx = Math.floor(Math.random() * rows);
-    gy = Math.floor(Math.random() * cols);
-  } while (
-    snake.some(s => s.x === gx && s.y === gy) ||
-    (food && food.x === gx && food.y === gy)
-  );
-  goldenFood = { x: gx, y: gy };
-
-  setTimeout(() => { goldenFood = null; draw(); }, 10000);
-}
-
-// ------------------------------
-// SPEED FRUIT 🔥 (speed boost 5 sec)
-// ------------------------------
-function spawnSpeedFruit() {
-  let sx, sy;
-  do {
-    sx = Math.floor(Math.random() * rows);
-    sy = Math.floor(Math.random() * cols);
-  } while (snake.some(s => s.x === sx && s.y === sy));
-  speedFood = { x: sx, y: sy };
-  setTimeout(() => { speedFood = null; draw(); }, 20000);
-}
-
-// ------------------------------
-// FREEZE FRUIT ⏳ (freeze game 5 sec)
-// ------------------------------
-function spawnFreezeFruit() {
-  let fx, fy;
-  do {
-    fx = Math.floor(Math.random() * rows);
-    fy = Math.floor(Math.random() * cols);
-  } while (snake.some(s => s.x === fx && s.y === fy));
-
-  freezeFood = { x: fx, y: fy };
-  setTimeout(() => { freezeFood = null; draw(); }, 15000);
-}
-
-// ------------------------------
-// (CONTINUED) BOOM SYSTEM + GAME LOOP + FRUIT LOGIC + DRAW + CONTROLS
-// ------------------------------
-
-// boom system (keeps your original behavior)
-function spawnBoom() {
-  // Warning
-  showWarning();
-
-  setTimeout(() => {
-    let bx, by;
+// --- CORE GAME LOGIC ---
+function spawnItem(type, timeout = null) {
+    let x, y;
+    let attempts = 0;
     do {
-      bx = Math.floor(Math.random() * rows);
-      by = Math.floor(Math.random() * cols);
-    } while (
-      snake.some(s => s.x === bx && s.y === by) ||
-      (food && food.x === bx && food.y === by) ||
-      (bigFood && bigFood.x === bx && bigFood.y === by) ||
-      (goldenFood && goldenFood.x === bx && goldenFood.y === by) ||
-      (speedFood && speedFood.x === bx && speedFood.y === by) ||
-      (freezeFood && freezeFood.x === bx && freezeFood.y === by)
-    );
+        x = Math.floor(Math.random() * gameState.grid.rows);
+        y = Math.floor(Math.random() * gameState.grid.cols);
+        attempts++;
+        if(attempts > 100) return; // Prevent infinite loop on full board
+    } while (isOccupied(x, y));
 
-    boom = { x: bx, y: by };
+    if (type === 'boom') {
+        gameState.boom = { x, y };
+        showBoomWarning();
+        setTimeout(() => { gameState.boom = null; draw(); }, 4000);
+    } else {
+        gameState.food[type] = { x, y };
+        if (timeout) {
+            setTimeout(() => {
+                if (gameState.food[type] && gameState.food[type].x === x && gameState.food[type].y === y) {
+                    gameState.food[type] = null;
+                    draw();
+                }
+            }, timeout);
+        }
+    }
+    draw();
+}
 
-    screenShake();
-    playBoomSound();
+function isOccupied(x, y) {
+    if (gameState.snake.some(s => s.x === x && s.y === y)) return true;
+    if (gameState.food.normal && gameState.food.normal.x === x && gameState.food.normal.y === y) return true;
+    if (gameState.boom && gameState.boom.x === x && gameState.boom.y === y) return true;
+    // Check other special fruits...
+    return Object.values(gameState.food).some(f => f && f.x === x && f.y === y);
+}
 
-    // boom stays only 3 seconds
-    setTimeout(() => {
-      boom = null;
-      draw();
-    }, 3000);
+function moveSnake() {
+    if (!gameState.started || gameState.paused || gameState.frozen) return;
+
+    const head = { ...gameState.snake[0] };
+    gameState.prevDirection = gameState.direction;
+
+    if (gameState.direction === 'up') head.x--;
+    if (gameState.direction === 'down') head.x++;
+    if (gameState.direction === 'left') head.y--;
+    if (gameState.direction === 'right') head.y++;
+
+    // Collision Check
+    if (head.x < 0 || head.x >= gameState.grid.rows || head.y < 0 || head.y >= gameState.grid.cols ||
+        gameState.snake.some(s => s.x === head.x && s.y === head.y)) {
+        sounds.hit();
+        return endGame();
+    }
+
+    // Boom Collision
+    if (gameState.boom && head.x === gameState.boom.x && head.y === gameState.boom.y) {
+        sounds.boom();
+        return endGame();
+    }
+
+    gameState.snake.unshift(head);
+
+    // Eating Logic
+    let ate = false;
+    if (gameState.food.normal && head.x === gameState.food.normal.x && head.y === gameState.food.normal.y) {
+        updateScore(5);
+        gameState.speed = Math.max(SPEED_MIN, gameState.speed - SPEED_STEP);
+        resetMainInterval();
+        spawnItem('normal');
+        ate = true;
+    } else if (gameState.food.big && head.x === gameState.food.big.x && head.y === gameState.food.big.y) {
+        updateScore(20);
+        gameState.food.big = null;
+        ate = true;
+    } else if (gameState.food.golden && head.x === gameState.food.golden.x && head.y === gameState.food.golden.y) {
+        updateScore(50);
+        gameState.food.golden = null;
+        ate = true;
+    } else if (gameState.food.speed && head.x === gameState.food.speed.x && head.y === gameState.food.speed.y) {
+        triggerSpeedBoost();
+        gameState.food.speed = null;
+        ate = true;
+    } else if (gameState.food.freeze && head.x === gameState.food.freeze.x && head.y === gameState.food.freeze.y) {
+        triggerFreezeEffect();
+        gameState.food.freeze = null;
+        ate = true;
+    }
+
+    if (!ate) gameState.snake.pop();
+    if (ate) sounds.eat();
 
     draw();
-  }, 2000);
 }
 
-function showWarning() {
-  const warn = document.createElement('div');
-  warn.className = "boom-warning";
-  warn.innerText = "⚠️ BOOM INCOMING!";
-  document.body.appendChild(warn);
-
-  setTimeout(() => warn.remove(), 1500);
+function updateScore(pts) {
+    gameState.score += pts;
+    elements.score.textContent = gameState.score;
+    if (gameState.score > gameState.highScore) {
+        gameState.highScore = gameState.score;
+        elements.highScore.textContent = gameState.highScore;
+        localStorage.setItem("snakeHighScore", gameState.highScore);
+    }
 }
 
-function screenShake() {
-  document.body.classList.add("shake");
-  setTimeout(() => document.body.classList.remove("shake"), 500);
+function triggerSpeedBoost() {
+    const currentSpeed = gameState.speed;
+    gameState.speed = Math.max(SPEED_MIN, Math.floor(gameState.speed * 0.6));
+    resetMainInterval();
+    setTimeout(() => {
+        gameState.speed = currentSpeed;
+        resetMainInterval();
+    }, 5000);
 }
 
-// ------------------------------
-// GAME STATE HELPERS for intervals and freeze/speed
-// ------------------------------
-let frozen = false;        // used by Freeze fruit
-let prevSpeed = null;      // used to restore speed after boost
+function triggerFreezeEffect() {
+    gameState.frozen = true;
+    setTimeout(() => {
+        gameState.frozen = false;
+    }, 5000);
+}
 
+// --- RENDER SYSTEM ---
+function draw() {
+    // Clear board classes
+    Object.values(gameState.grid.blocks).forEach(b => {
+        b.className = "block";
+    });
+
+    // Draw snake
+    gameState.snake.forEach((segment, i) => {
+        const key = `${segment.x}-${segment.y}`;
+        if (gameState.grid.blocks[key]) {
+            gameState.grid.blocks[key].classList.add(i === 0 ? "head" : "fill");
+        }
+    });
+
+    // Draw items
+    if (gameState.food.normal) addClass(gameState.food.normal, "apple");
+    if (gameState.food.big) addClass(gameState.food.big, "big-apple");
+    if (gameState.food.golden) addClass(gameState.food.golden, "golden-apple");
+    if (gameState.food.speed) addClass(gameState.food.speed, "speed-fruit");
+    if (gameState.food.freeze) addClass(gameState.food.freeze, "freeze-fruit");
+    if (gameState.boom) addClass(gameState.boom, "boom");
+}
+
+function addClass(pos, className) {
+    const key = `${pos.x}-${pos.y}`;
+    if (gameState.grid.blocks[key]) gameState.grid.blocks[key].classList.add(className);
+}
+
+// --- INTERACTION SYSTEM ---
+function handleKey(e) {
+    if (!gameState.started) {
+        if (e.code === 'Space') startGame();
+        return;
+    }
+    
+    if (e.code === 'KeyP') togglePause();
+    
+    const dirs = {
+        ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right',
+        KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right'
+    };
+
+    const newDir = dirs[e.code];
+    if (!newDir) return;
+
+    changeDirection(newDir);
+}
+
+function changeDirection(newDir) {
+    const opposites = { up: 'down', down: 'up', left: 'right', right: 'left' };
+    if (newDir !== opposites[gameState.prevDirection]) {
+        gameState.direction = newDir;
+    }
+}
+
+// Swipe Support
+let touchStart = { x: 0, y: 0 };
+elements.board.addEventListener('touchstart', e => {
+    touchStart.x = e.touches[0].clientX;
+    touchStart.y = e.touches[0].clientY;
+}, { passive: true });
+
+elements.board.addEventListener('touchend', e => {
+    if (!gameState.started) {
+        startGame();
+        return;
+    }
+
+    const deltaX = e.changedTouches[0].clientX - touchStart.x;
+    const deltaY = e.changedTouches[0].clientY - touchStart.y;
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (Math.abs(deltaX) > 30) changeDirection(deltaX > 0 ? 'right' : 'left');
+    } else {
+        if (Math.abs(deltaY) > 30) changeDirection(deltaY > 0 ? 'down' : 'up');
+    }
+}, { passive: true });
+
+// --- GAME FLOW ---
+function startGame() {
+    if (gameState.started) return;
+
+    // Reset State
+    gameState.started = true;
+    gameState.paused = false;
+    gameState.score = 0;
+    gameState.timeLeft = 0;
+    gameState.speed = BASE_SPEED;
+    gameState.direction = 'right';
+    gameState.prevDirection = 'right';
+    gameState.food = { normal: null, big: null, golden: null, speed: null, freeze: null };
+    gameState.boom = null;
+
+    elements.score.textContent = "0";
+    elements.time.textContent = "0";
+    elements.highScore.textContent = gameState.highScore;
+    elements.startOverlay.classList.add('hidden');
+    elements.modal.classList.add('hidden');
+
+    setupGrid();
+    
+    const startX = Math.floor(gameState.grid.rows / 2);
+    const startY = Math.floor(gameState.grid.cols / 2);
+    gameState.snake = [
+        { x: startX, y: startY },
+        { x: startX, y: startY - 1 },
+        { x: startX, y: startY - 2 }
+    ];
+
+    spawnItem('normal');
+    startIntervals();
+    
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    bgMusic.play().catch(() => {});
+}
+
+function endGame() {
+    gameState.started = false;
+    stopIntervals();
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    
+    elements.finalScore.textContent = gameState.score;
+    elements.finalHigh.textContent = gameState.highScore;
+    elements.modal.classList.remove('hidden');
+    elements.startOverlay.classList.remove('hidden');
+}
+
+function togglePause() {
+    if (!gameState.started) return;
+    gameState.paused = !gameState.paused;
+    elements.pauseOverlay.classList.toggle('hidden', !gameState.paused);
+    if (gameState.paused) bgMusic.pause();
+    else bgMusic.play().catch(() => {});
+}
+
+// --- INTERVAL MANAGEMENT ---
 function startIntervals() {
-  // clear any existing to avoid duplicates
-  clearInterval(gameInterval);
-  clearInterval(timeInterval);
-  clearInterval(boomInterval);
+    stopIntervals();
+    gameState.intervals.main = setInterval(moveSnake, gameState.speed);
+    gameState.intervals.time = setInterval(() => {
+        if (!gameState.paused && !gameState.frozen) {
+            gameState.timeLeft++;
+            elements.time.textContent = gameState.timeLeft;
+        }
+    }, 1000);
 
-  gameInterval = setInterval(stepSnake, speed);
-  timeInterval = setInterval(tickTime, 1000);
-  boomInterval = setInterval(spawnBoom, 10000);
+    gameState.intervals.boom = setInterval(() => {
+        if (!gameState.paused && !gameState.frozen) spawnItem('boom');
+    }, 12000);
+
+    // Fruit schedules
+    gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('big', 5000); }, 8000));
+    gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('golden', 8000); }, 15000));
+    gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('speed', 6000); }, 20000));
+    gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('freeze', 6000); }, 25000));
 }
+
+function shouldSpawn() { return gameState.started && !gameState.paused && !gameState.frozen; }
 
 function stopIntervals() {
-  clearInterval(gameInterval);
-  clearInterval(timeInterval);
-  clearInterval(boomInterval);
+    clearInterval(gameState.intervals.main);
+    clearInterval(gameState.intervals.time);
+    clearInterval(gameState.intervals.boom);
+    gameState.intervals.fruits.forEach(clearInterval);
+    gameState.intervals.fruits = [];
 }
 
-// ------------------------------
-// START GAME (update to start extra fruit timers)
-// ------------------------------
-startButton.addEventListener('click', async () => {
-  if (audioCtx && audioCtx.state === "suspended") {
-    await audioCtx.resume();
-  }
+function resetMainInterval() {
+    clearInterval(gameState.intervals.main);
+    gameState.intervals.main = setInterval(moveSnake, gameState.speed);
+}
 
-  bgMUsic.play()
-    .then(() => console.log("Music playing"))
-    .catch(err => console.log("Audio blocked:", err));
+// --- UTILITIES ---
+function showBoomWarning() {
+    const warn = document.createElement('div');
+    warn.className = "boom-warning";
+    warn.innerHTML = "⚠️ INCOMING!";
+    document.body.appendChild(warn);
+    setTimeout(() => warn.remove(), 1200);
+}
 
-  bgMUsic.loop = true;
-  bgMUsic.volume = 0.4;
-  if (!started) startGame();
+// --- INITIALIZATION ---
+window.addEventListener('keydown', handleKey);
+elements.startBtn.addEventListener('click', startGame);
+elements.pauseBtn.addEventListener('click', togglePause);
+elements.restartBtn.addEventListener('click', startGame);
+elements.closeBtn.addEventListener('click', () => elements.modal.classList.add('hidden'));
+
+// Theme Selector
+document.getElementById('themeSelect').addEventListener('change', (e) => {
+    document.body.setAttribute('data-theme', e.target.value);
 });
 
-function startGame() {
-  started = true;
-  paused = false;
-  frozen = false;
-
-  timeLeft = 0;
-  speed = 400;
-  scoreDisplay.textContent = '0';
-
-  setupGrid();
-
-  const sx = Math.floor(rows / 2), sy = Math.floor(cols / 2);
-  snake = [
-    { x: sx, y: sy },
-    { x: sx, y: sy - 1 },
-    { x: sx, y: sy - 2 }
-  ];
-  direction = 'right';
-
-  spawnFood();
-  boom = null;
-  bigFood = null;
-  goldenFood = null;
-  speedFood = null;
-  freezeFood = null;
-
-  // clear any previous timers
-  clearInterval(gameInterval);
-  clearInterval(timeInterval);
-  clearInterval(boomInterval);
-  clearInterval(bigFoodTimer);
-  clearInterval(goldenTimer);
-  clearInterval(speedBoostTimer);
-  clearInterval(freezeTimer);
-
-  // main intervals
-  gameInterval = setInterval(stepSnake, speed);
-  timeInterval = setInterval(tickTime, 1000);
-  boomInterval = setInterval(spawnBoom, 10000);
-
-  // spawn special fruits on their schedules
-  bigFoodTimer = setInterval(spawnBigFood, 5000);       // big every 5s
-  goldenTimer = setInterval(spawnGoldenFood, 10000);   // golden every 10s
-  speedBoostTimer = setInterval(spawnSpeedFruit, 12000);// speed fruit every 12s
-  freezeTimer = setInterval(spawnFreezeFruit, 15000);  // freeze fruit every 15s
-
-  // initial draw
-  draw();
-}
-
-// ------------------------------
-// MOVE SNAKE (with fruit handling & freeze check)
-// ------------------------------
-function stepSnake() {
-  if (paused || frozen || !started) return;
-
-  const head = { ...snake[0] };
-  if (direction === 'left') head.y--;
-  if (direction === 'right') head.y++;
-  if (direction === 'up') head.x--;
-  if (direction === 'down') head.x++;
-
-  // WALL HIT
-  if (head.x < 0 || head.x >= rows || head.y < 0 || head.y >= cols) {
-    playHitSound();
-    return endGame("Wall");
-  }
-
-  // SELF HIT
-  if (snake.some(s => s.x === head.x && s.y === head.y)) {
-    playHitSound();
-    return endGame("Self");
-  }
-
-  // BOOM HIT = GAME OVER
-  if (boom && head.x === boom.x && head.y === boom.y) {
-    playBoomSound();
-    return endGame("BOOM");
-  }
-
-  snake.unshift(head);
-
-  // --- EAT NORMAL FOOD (5 points)
-  if (food && head.x === food.x && head.y === food.y) {
-    playEatSound();
-
-    const newScore = parseInt(scoreDisplay.textContent) + 5;
-    scoreDisplay.textContent = newScore;
-
-    speed = Math.max(SPEED_MIN, speed - SPEED_STEP);
-    clearInterval(gameInterval);
-    gameInterval = setInterval(stepSnake, speed);
-
-    spawnFood();
-  }
-  // --- EAT BIG ORANGE APPLE (20 points)
-  else if (bigFood && head.x === bigFood.x && head.y === bigFood.y) {
-    playEatSound();
-    const newScore = parseInt(scoreDisplay.textContent) + 20;
-    scoreDisplay.textContent = newScore;
-    bigFood = null;
-  }
-  // --- EAT GOLDEN APPLE (50 points)
-  else if (goldenFood && head.x === goldenFood.x && head.y === goldenFood.y) {
-    playEatSound();
-    const newScore = parseInt(scoreDisplay.textContent) + 50;
-    scoreDisplay.textContent = newScore;
-    goldenFood = null;
-  }
-  // --- EAT SPEED FRUIT (speed boost 5s)
-  else if (speedFood && head.x === speedFood.x && head.y === speedFood.y) {
-    playEatSound();
-    speedFood = null;
-
-    // store and apply faster speed (40% faster => multiply by 0.6)
-    if (!prevSpeed) prevSpeed = speed;
-    speed = Math.max(SPEED_MIN, Math.floor(speed * 0.6));
-    clearInterval(gameInterval);
-    gameInterval = setInterval(stepSnake, speed);
-
-    // restore after 5s
-    setTimeout(() => {
-      if (prevSpeed) {
-        speed = prevSpeed;
-        prevSpeed = null;
-        clearInterval(gameInterval);
-        gameInterval = setInterval(stepSnake, speed);
-      }
-    }, 5000);
-  }
-  // --- EAT FREEZE FRUIT (freeze 5s)
-  else if (freezeFood && head.x === freezeFood.x && head.y === freezeFood.y) {
-    playEatSound();
-    freezeFood = null;
-
-    // freeze game: stop movement, stop time and bombs
-    frozen = true;
-    clearInterval(gameInterval);
-    clearInterval(boomInterval);
-    clearInterval(timeInterval);
-
-    // after 5s resume
-    setTimeout(() => {
-      frozen = false;
-      // restart intervals with current speed
-      clearInterval(gameInterval);
-      gameInterval = setInterval(stepSnake, speed);
-      timeInterval = setInterval(tickTime, 1000);
-      boomInterval = setInterval(spawnBoom, 10000);
-    }, 5000);
-  }
-  else {
-    // no eating -> move normally (pop tail)
-    snake.pop();
-  }
-
-  draw();
-}
-
-// ------------------------------
-// KEYBOARD CONTROLS
-// ------------------------------
-document.addEventListener('keydown', (e) => {
-  if (paused || frozen || !started) return;
-
-  if (e.key === 'ArrowUp' && direction !== 'down') {
-    direction = 'up';
-  }
-  else if (e.key === 'ArrowDown' && direction !== 'up') {
-    direction = 'down';
-  }
-  else if (e.key === 'ArrowLeft' && direction !== 'right') {
-    direction = 'left';
-  }
-  else if (e.key === 'ArrowRight' && direction !== 'left') {
-    direction = 'right';
-  }
-});
-
-// --- MOBILE / TOUCH CONTROLS (robust) ---
-(function() {
-  const mobileControls = document.getElementById('mobileControls');
-  if (!mobileControls) return;
-
-  const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' };
-
-  function trySetDirection(newDir) {
-    if (!started || paused || frozen) return;
-    if (opposite[newDir] === direction) return;
-    direction = newDir;
-  }
-
-  mobileControls.querySelectorAll('button[data-direction]').forEach(btn => {
-    const dir = btn.dataset.direction;
-
-    function onPointerDown(e) {
-      if (e.cancelable) e.preventDefault();
-      trySetDirection(dir);
-      btn.classList.add('active');
-    }
-
-    function removeActive() { btn.classList.remove('active'); }
-
-    btn.addEventListener('pointerdown', onPointerDown, { passive: false });
-    btn.addEventListener('pointerup', removeActive);
-    btn.addEventListener('pointercancel', removeActive);
-    btn.addEventListener('pointerleave', removeActive);
-    btn.addEventListener('touchstart', function(e) { onPointerDown(e); }, { passive: false });
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      trySetDirection(dir);
-      setTimeout(removeActive, 120);
-    });
-  });
-
-  function updateMobileVisibility() {
-    if (window.innerWidth <= 680) {
-      mobileControls.style.display = ''; // CSS decides
-    } else {
-      mobileControls.style.display = 'none';
-    }
-  }
-  window.addEventListener('resize', updateMobileVisibility);
-  updateMobileVisibility();
-})();
-
-// ------------------------------
-// DRAW BLOCKS (render fruit classes safely)
-// ------------------------------
-function draw() {
-  // reset blocks
-  Object.values(blocks).forEach(el => el.className = "block");
-
-  // normal food
-  if (food) {
-    const key = `${food.x}-${food.y}`;
-    if (blocks[key]) blocks[key].classList.add("apple");
-  }
-
-  // big orange apple (20 pts)
-  if (bigFood) {
-    const key = `${bigFood.x}-${bigFood.y}`;
-    if (blocks[key]) blocks[key].classList.add("big-apple");
-  }
-
-  // golden apple (50 pts)
-  if (goldenFood) {
-    const key = `${goldenFood.x}-${goldenFood.y}`;
-    if (blocks[key]) blocks[key].classList.add("golden-apple");
-  }
-
-  // speed fruit (🔥)
-  if (speedFood) {
-    const key = `${speedFood.x}-${speedFood.y}`;
-    if (blocks[key]) blocks[key].classList.add("speed-fruit");
-  }
-
-  // freeze fruit (⏳)
-  if (freezeFood) {
-    const key = `${freezeFood.x}-${freezeFood.y}`;
-    if (blocks[key]) blocks[key].classList.add("freeze-fruit");
-  }
-
-  // boom
-  if (boom) {
-    const key = `${boom.x}-${boom.y}`;
-    if (blocks[key]) blocks[key].classList.add("boom");
-  }
-
-  // snake body + head
-  for (let i = 1; i < snake.length; i++) {
-    const key = `${snake[i].x}-${snake[i].y}`;
-    if (blocks[key]) blocks[key].classList.add("fill");
-  }
-  const headKey = `${snake[0].x}-${snake[0].y}`;
-  if (blocks[headKey]) blocks[headKey].classList.add("head");
-}
-
-// ------------------------------
-// TIMER
-// ------------------------------
-function tickTime() {
-  // time paused during frozen state because we clear its interval there
-  timeLeft++;
-  timeDisplay.textContent = timeLeft;
-}
-
-// ------------------------------
-// END GAME (clear fruit timers too)
-// ------------------------------
-function endGame(reason) {
-  started = false;
-  paused = false;
-  frozen = false;
-
-  try { bgMUsic.pause(); bgMUsic.currentTime = 0; } catch (e) {}
-
-  clearInterval(gameInterval);
-  clearInterval(timeInterval);
-  clearInterval(boomInterval);
-  clearInterval(bigFoodTimer);
-  clearInterval(goldenTimer);
-  clearInterval(speedBoostTimer);
-  clearInterval(freezeTimer);
-
-  // clear temporary states
-  bigFood = null;
-  goldenFood = null;
-  speedFood = null;
-  freezeFood = null;
-
-  const finalScore = parseInt(scoreDisplay.textContent || "0", 10);
-
-  if (finalScore > highScore) {
-    highScore = finalScore;
-    localStorage.setItem('snakeHighScore', highScore);
-    highScoreDisplay.textContent = highScore;
-  }
-
-  finalScoreEl.textContent = finalScore;
-  finalHighEl.textContent = highScore;
-
-  modalOverlay.classList.remove("hidden");
-}
-
-// restart
-restartBtn.addEventListener('click', () => {
-  modalOverlay.classList.add('hidden');
-  startGame();
-});
-closeBtn.addEventListener('click', () => modalOverlay.classList.add('hidden'));
-
-// Pause button behavior (keeps previous behavior but respects fruit timers)
-pauseButton.addEventListener('click', () => {
-  if (!started) return;
-
-  paused = !paused;
-
-  if (paused) {
-    // stop the main intervals but keep spawn timers for fruits so they still appear
-    clearInterval(gameInterval);
-    clearInterval(timeInterval);
-    clearInterval(boomInterval);
-
-    try { bgMUsic.pause(); } catch (e) {}
-
-    pauseButton.textContent = 'Resume';
-  } else {
-    // resume intervals
-    if (!frozen) {
-      gameInterval = setInterval(stepSnake, speed);
-      timeInterval = setInterval(tickTime, 1000);
-      boomInterval = setInterval(spawnBoom, 10000);
-    }
-    try { bgMUsic.play().catch(()=>{}); } catch(e){}
-
-    pauseButton.textContent = 'Pause';
-  }
+// Initialization
+setupGrid();
+window.addEventListener('resize', () => {
+    if (!gameState.started) setupGrid();
 });
