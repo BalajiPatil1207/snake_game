@@ -11,12 +11,21 @@ const DIFFICULTY_SETTINGS = {
     hard: { baseSpeed: 120, speedStep: 18 }
 };
 
+const SKINS = [
+    { id: 'classic', name: 'Classic Green', price: 0, class: 'fill-classic' },
+    { id: 'neon', name: 'Neon Cyber', price: 50, class: 'fill-neon' },
+    { id: 'lava', name: 'Lava Flow', price: 100, class: 'fill-lava' },
+    { id: 'ice', name: 'Arctic Ice', price: 150, class: 'fill-ice' },
+    { id: 'gold', name: 'Royal Gold', price: 300, class: 'fill-gold' }
+];
+
 // --- STATE ---
 let gameState = {
     started: false,
     paused: false,
     frozen: false,
     score: 0,
+    coins: parseInt(localStorage.getItem("snakeProCoins") || "0"),
     highScore: parseInt(localStorage.getItem("snakeHighScore") || "0"),
     speed: 200,
     timeLeft: 0,
@@ -30,7 +39,9 @@ let gameState = {
     settings: {
         sound: true,
         vibration: true,
-        difficulty: 'medium'
+        difficulty: 'medium',
+        selectedSkin: localStorage.getItem("snakeProSelectedSkin") || 'classic',
+        unlockedSkins: JSON.parse(localStorage.getItem("snakeProUnlockedSkins") || '["classic"]')
     }
 };
 
@@ -38,6 +49,8 @@ let gameState = {
 const elements = {
     board: document.getElementById('game-board'),
     score: document.getElementById('score'),
+    coinCount: document.getElementById('coinCount'),
+    shopCoinCount: document.getElementById('shopCoinCount'),
     time: document.getElementById('time'),
     highScore: document.getElementById('highScore'),
     startBtn: document.getElementById('start-button'),
@@ -45,11 +58,15 @@ const elements = {
     restartBtn: document.getElementById('restartBtn'),
     closeBtn: document.getElementById('closeBtn'),
     settingsBtn: document.getElementById('settingsBtn'),
+    shopBtn: document.getElementById('shopBtn'),
     saveSettingsBtn: document.getElementById('saveSettingsBtn'),
+    closeShopBtn: document.getElementById('closeShopBtn'),
     startOverlay: document.getElementById('start-overlay'),
     pauseOverlay: document.getElementById('pause-overlay'),
     modal: document.getElementById('modalOverlay'),
     settingsModal: document.getElementById('settingsOverlay'),
+    shopModal: document.getElementById('shopOverlay'),
+    skinGallery: document.getElementById('skinGallery'),
     finalScore: document.getElementById('finalScore'),
     finalHigh: document.getElementById('finalHigh'),
     soundToggle: document.getElementById('soundToggle'),
@@ -79,7 +96,8 @@ function playTone(freq, type = 'sine', duration = 120, gain = 0.05) {
 const sounds = {
     eat: () => { playTone(700); playTone(900, 'sine', 80); },
     hit: () => playTone(120, 'sawtooth', 250),
-    boom: () => playTone(80, 'square', 400, 0.15)
+    boom: () => playTone(80, 'square', 400, 0.15),
+    buy: () => { playTone(600); playTone(800, 'sine', 100); }
 };
 
 // --- VIBRATION SYSTEM ---
@@ -90,6 +108,18 @@ function triggerVibrate(pattern) {
 }
 
 // --- PERSISTENCE ---
+function loadProgress() {
+    elements.coinCount.textContent = gameState.coins;
+    elements.highScore.textContent = gameState.highScore;
+}
+
+function saveProgress() {
+    localStorage.setItem("snakeProCoins", gameState.coins);
+    localStorage.setItem("snakeHighScore", gameState.highScore);
+    localStorage.setItem("snakeProSelectedSkin", gameState.settings.selectedSkin);
+    localStorage.setItem("snakeProUnlockedSkins", JSON.stringify(gameState.settings.unlockedSkins));
+}
+
 function loadSettings() {
     const saved = localStorage.getItem('snakeProSettings');
     if (saved) {
@@ -105,12 +135,64 @@ function saveSettings() {
     gameState.settings.vibration = elements.vibrationToggle.checked;
     gameState.settings.difficulty = elements.difficultySelect.value;
     localStorage.setItem('snakeProSettings', JSON.stringify(gameState.settings));
-    
-    if (!gameState.settings.sound) {
-        bgMusic.pause();
-    } else if (gameState.started && !gameState.paused) {
-        bgMusic.play().catch(() => {});
+}
+
+// --- SHOP LOGIC ---
+function renderShop() {
+    elements.shopCoinCount.textContent = gameState.coins;
+    elements.skinGallery.innerHTML = "";
+
+    SKINS.forEach(skin => {
+        const isUnlocked = gameState.settings.unlockedSkins.includes(skin.id);
+        const isSelected = gameState.settings.selectedSkin === skin.id;
+
+        const card = document.createElement("div");
+        card.className = `skin-card ${isSelected ? 'selected' : ''}`;
+        
+        card.innerHTML = `
+            <div class="skin-preview">
+                <span class="${skin.class}"></span>
+                <span class="${skin.class}"></span>
+                <span class="${skin.class}"></span>
+                <span class="${skin.class}"></span>
+            </div>
+            <div class="skin-name">${skin.name}</div>
+            <div class="skin-status ${isUnlocked ? (isSelected ? 'status-active' : 'status-select') : 'status-buy'}">
+                ${isUnlocked ? (isSelected ? 'Active' : 'Select') : skin.price + ' 💰'}
+            </div>
+        `;
+
+        card.addEventListener('click', () => {
+            if (isUnlocked) {
+                selectSkin(skin.id);
+            } else {
+                buySkin(skin);
+            }
+        });
+
+        elements.skinGallery.appendChild(card);
+    });
+}
+
+function buySkin(skin) {
+    if (gameState.coins >= skin.price) {
+        gameState.coins -= skin.price;
+        gameState.settings.unlockedSkins.push(skin.id);
+        sounds.buy();
+        saveProgress();
+        renderShop();
+        elements.coinCount.textContent = gameState.coins;
+    } else {
+        triggerVibrate([50, 50]);
+        alert("Not enough coins! 🐍💰");
     }
+}
+
+function selectSkin(id) {
+    gameState.settings.selectedSkin = id;
+    saveProgress();
+    renderShop();
+    draw();
 }
 
 // --- GRID ENGINE ---
@@ -203,18 +285,18 @@ function moveSnake() {
     // Eating Logic
     let ate = false;
     if (gameState.food.normal && head.x === gameState.food.normal.x && head.y === gameState.food.normal.y) {
-        updateScore(5);
+        updateGameStats(5, 1);
         const diff = DIFFICULTY_SETTINGS[gameState.settings.difficulty];
         gameState.speed = Math.max(50, gameState.speed - diff.speedStep);
         resetMainInterval();
         spawnItem('normal');
         ate = true;
     } else if (gameState.food.big && head.x === gameState.food.big.x && head.y === gameState.food.big.y) {
-        updateScore(20);
+        updateGameStats(20, 5);
         gameState.food.big = null;
         ate = true;
     } else if (gameState.food.golden && head.x === gameState.food.golden.x && head.y === gameState.food.golden.y) {
-        updateScore(50);
+        updateGameStats(50, 10);
         gameState.food.golden = null;
         ate = true;
     } else if (gameState.food.speed && head.x === gameState.food.speed.x && head.y === gameState.food.speed.y) {
@@ -236,14 +318,20 @@ function moveSnake() {
     draw();
 }
 
-function updateScore(pts) {
-    gameState.score += pts;
+function updateGameStats(scorePts, coinPts) {
+    // Score
+    gameState.score += scorePts;
     elements.score.textContent = gameState.score;
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
         elements.highScore.textContent = gameState.highScore;
-        localStorage.setItem("snakeHighScore", gameState.highScore);
     }
+
+    // Coins
+    gameState.coins += coinPts;
+    elements.coinCount.textContent = gameState.coins;
+    
+    saveProgress();
 }
 
 function triggerSpeedBoost() {
@@ -269,10 +357,12 @@ function draw() {
         b.className = "block";
     });
 
+    const skinClass = SKINS.find(s => s.id === gameState.settings.selectedSkin).class;
+
     gameState.snake.forEach((segment, i) => {
         const key = `${segment.x}-${segment.y}`;
         if (gameState.grid.blocks[key]) {
-            gameState.grid.blocks[key].classList.add(i === 0 ? "head" : "fill");
+            gameState.grid.blocks[key].classList.add(i === 0 ? "head" : skinClass);
         }
     });
 
@@ -358,11 +448,11 @@ function startGame() {
 
     elements.score.textContent = "0";
     elements.time.textContent = "0";
-    elements.highScore.textContent = gameState.highScore;
     elements.startOverlay.classList.add('hidden');
     elements.modal.classList.add('hidden');
 
     setupGrid();
+    loadProgress();
     
     const startX = Math.floor(gameState.grid.rows / 2);
     const startY = Math.floor(gameState.grid.cols / 2);
@@ -467,12 +557,23 @@ elements.saveSettingsBtn.addEventListener('click', () => {
     elements.settingsModal.classList.add('hidden');
 });
 
+// Shop Event Listeners
+elements.shopBtn.addEventListener('click', () => {
+    renderShop();
+    elements.shopModal.classList.remove('hidden');
+});
+
+elements.closeShopBtn.addEventListener('click', () => {
+    elements.shopModal.classList.add('hidden');
+});
+
 // Theme Selector
 document.getElementById('themeSelect').addEventListener('change', (e) => {
     document.body.setAttribute('data-theme', e.target.value);
 });
 
 // Initialization
+loadProgress();
 loadSettings();
 setupGrid();
 window.addEventListener('resize', () => {
