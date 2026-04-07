@@ -181,14 +181,14 @@ body {
 /* HUD System (Mobile) */
 .hud {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(5, 1fr); /* 5-item HUD */
+    gap: 4px;
 }
 
 .hud-item {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid var(--glass-border);
-    padding: 8px 4px;
+    padding: 8px 2px;
     border-radius: 12px;
     display: flex;
     flex-direction: column;
@@ -197,7 +197,7 @@ body {
 }
 
 .hud-item .label {
-    font-size: 0.55rem;
+    font-size: 0.5rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     color: var(--text-secondary);
@@ -206,12 +206,13 @@ body {
 
 .hud-item .value {
     font-family: var(--font-display);
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: 800;
 }
 
 .score-card .value { color: var(--accent-color); }
 .coin-card .value { color: #ffd700; }
+.level-card .value { color: var(--secondary-color); text-shadow: 0 0 5px var(--secondary-color); }
 .high-card .value { color: var(--warning); }
 
 /* Main Game Layout (Desktop Side-by-Side) */
@@ -271,6 +272,8 @@ body {
     font-weight: 800;
 }
 
+.level-val { color: var(--secondary-color) !important; text-shadow: 0 0 10px var(--secondary-color); }
+
 #sideScore { color: var(--accent-color); }
 #sideCoinCount { color: #ffd700; }
 #sideHighScore { color: var(--warning); }
@@ -322,6 +325,45 @@ body {
     background: rgba(255, 255, 255, 0.1);
     padding: 2px 6px;
     border-radius: 4px;
+}
+
+/* Notification Banners */
+.level-banner {
+    position: absolute;
+    top: 30%;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: linear-gradient(90deg, transparent, rgba(112, 0, 255, 0.4), transparent);
+    backdrop-filter: blur(8px);
+    padding: 20px 0;
+    text-align: center;
+    border-top: 1px solid var(--secondary-color);
+    border-bottom: 1px solid var(--secondary-color);
+    animation: bannerPop 3s ease-in-out forwards;
+}
+
+.banner-content h2 {
+    font-family: var(--font-display);
+    font-size: 3.5rem;
+    font-weight: 950;
+    color: #fff;
+    text-shadow: 0 0 20px var(--secondary-color);
+    margin: 5px 0;
+}
+
+.banner-sub {
+    font-size: 0.8rem;
+    letter-spacing: 4px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+@keyframes bannerPop {
+    0% { transform: scaleX(0); opacity: 0; }
+    15% { transform: scaleX(1); opacity: 1; }
+    85% { transform: scaleX(1); opacity: 1; }
+    100% { transform: scaleX(0); opacity: 0; }
 }
 
 /* Logic Blocks */
@@ -774,8 +816,9 @@ input:checked + .slider:before {
     .game-container { padding: 16px; border-radius: 20px; }
     .brand h1 { font-size: 1.25rem; }
     .glow-text { font-size: 2.5rem; }
-    .hud-item .value { font-size: 1.1rem; }
+    .hud-item .value { font-size: 0.8rem; }
     .game-surface { min-height: 400px; }
+    .hud { gap: 2px; }
 }
 
 .desktop-only { display: block; }

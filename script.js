@@ -11,6 +11,15 @@ const DIFFICULTY_SETTINGS = {
     hard: { baseSpeed: 120, speedStep: 18 }
 };
 
+const LEVEL_MILESTONES = [
+    { level: 2, score: 100 },
+    { level: 3, score: 300 },
+    { level: 4, score: 600 },
+    { level: 5, score: 1000 },
+    { level: 6, score: 1500 },
+    { level: 7, score: 2200 }
+];
+
 const SKINS = [
     { id: 'classic', name: 'Classic Green', price: 0, class: 'fill-classic' },
     { id: 'neon', name: 'Neon Cyber', price: 50, class: 'fill-neon' },
@@ -25,9 +34,11 @@ let gameState = {
     paused: false,
     frozen: false,
     score: 0,
+    level: 1,
     coins: parseInt(localStorage.getItem("snakeProCoins") || "0"),
     highScore: parseInt(localStorage.getItem("snakeHighScore") || "0"),
     speed: 200,
+    baseSpeed: 200,
     timeLeft: 0,
     direction: 'right',
     prevDirection: 'right',
@@ -51,11 +62,13 @@ const elements = {
     // Mobile HUD
     score: document.getElementById('score'),
     coinCount: document.getElementById('coinCount'),
+    level: document.getElementById('level'),
     time: document.getElementById('time'),
     highScore: document.getElementById('highScore'),
     // Desktop Sidebar
     sideScore: document.getElementById('sideScore'),
     sideCoinCount: document.getElementById('sideCoinCount'),
+    sideLevel: document.getElementById('sideLevel'),
     sideTime: document.getElementById('sideTime'),
     sideHighScore: document.getElementById('sideHighScore'),
     // Controls
@@ -80,6 +93,9 @@ const elements = {
     settingsModal: document.getElementById('settingsOverlay'),
     shopModal: document.getElementById('shopOverlay'),
     skinGallery: document.getElementById('skinGallery'),
+    // Banners
+    levelBanner: document.getElementById('levelBanner'),
+    levelName: document.getElementById('levelName'),
     // Overlays
     finalScore: document.getElementById('finalScore'),
     finalHigh: document.getElementById('finalHigh'),
@@ -112,7 +128,12 @@ const sounds = {
     eat: () => { playTone(700); playTone(900, 'sine', 80); },
     hit: () => playTone(120, 'sawtooth', 250),
     boom: () => playTone(80, 'square', 400, 0.15),
-    buy: () => { playTone(600); playTone(800, 'sine', 100); }
+    buy: () => { playTone(600); playTone(800, 'sine', 100); },
+    levelUp: () => { 
+        playTone(523, 'sine', 200); 
+        setTimeout(() => playTone(659, 'sine', 200), 150);
+        setTimeout(() => playTone(783, 'sine', 400), 300);
+    }
 };
 
 // --- VIBRATION SYSTEM ---
@@ -133,6 +154,7 @@ function updateDisplayValue(key, val) {
 function loadProgress() {
     updateDisplayValue('coinCount', gameState.coins);
     updateDisplayValue('highScore', gameState.highScore);
+    updateDisplayValue('level', gameState.level);
 }
 
 function saveProgress() {
@@ -307,18 +329,15 @@ function moveSnake() {
     // Eating Logic
     let ate = false;
     if (gameState.food.normal && head.x === gameState.food.normal.x && head.y === gameState.food.normal.y) {
-        updateGameStats(5, 1);
-        const diff = DIFFICULTY_SETTINGS[gameState.settings.difficulty];
-        gameState.speed = Math.max(50, gameState.speed - diff.speedStep);
-        resetMainInterval();
+        updateGameStats(10, 1);
         spawnItem('normal');
         ate = true;
     } else if (gameState.food.big && head.x === gameState.food.big.x && head.y === gameState.food.big.y) {
-        updateGameStats(20, 5);
+        updateGameStats(30, 5);
         gameState.food.big = null;
         ate = true;
     } else if (gameState.food.golden && head.x === gameState.food.golden.x && head.y === gameState.food.golden.y) {
-        updateGameStats(50, 10);
+        updateGameStats(60, 10);
         gameState.food.golden = null;
         ate = true;
     } else if (gameState.food.speed && head.x === gameState.food.speed.x && head.y === gameState.food.speed.y) {
@@ -344,6 +363,10 @@ function updateGameStats(scorePts, coinPts) {
     // Score
     gameState.score += scorePts;
     updateDisplayValue('score', gameState.score);
+    
+    // Level Up Check
+    checkLevelUp();
+
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
         updateDisplayValue('highScore', gameState.highScore);
@@ -354,6 +377,33 @@ function updateGameStats(scorePts, coinPts) {
     updateDisplayValue('coinCount', gameState.coins);
     
     saveProgress();
+}
+
+function checkLevelUp() {
+    const nextMilestone = LEVEL_MILESTONES.find(m => m.level === gameState.level + 1);
+    
+    if (nextMilestone && gameState.score >= nextMilestone.score) {
+        gameState.level = nextMilestone.level;
+        updateDisplayValue('level', gameState.level);
+        triggerLevelUp();
+    }
+}
+
+function triggerLevelUp() {
+    sounds.levelUp();
+    triggerVibrate([100, 50, 200]);
+    
+    // Difficulty Boost
+    gameState.baseSpeed = Math.max(50, gameState.baseSpeed - (gameState.level * 5));
+    gameState.speed = gameState.baseSpeed;
+    resetMainInterval();
+
+    // Visual Notification
+    elements.levelName.textContent = `LEVEL ${gameState.level}`;
+    elements.levelBanner.classList.remove('hidden');
+    setTimeout(() => {
+        elements.levelBanner.classList.add('hidden');
+    }, 3000);
 }
 
 function triggerSpeedBoost() {
@@ -461,8 +511,10 @@ function startGame() {
     gameState.started = true;
     gameState.paused = false;
     gameState.score = 0;
+    gameState.level = 1;
     gameState.timeLeft = 0;
     gameState.speed = diff.baseSpeed;
+    gameState.baseSpeed = diff.baseSpeed;
     gameState.direction = 'right';
     gameState.prevDirection = 'right';
     gameState.food = { normal: null, big: null, golden: null, speed: null, freeze: null };
@@ -470,6 +522,7 @@ function startGame() {
 
     updateDisplayValue('score', '0');
     updateDisplayValue('time', '0');
+    updateDisplayValue('level', '1');
     elements.startOverlay.classList.add('hidden');
     elements.modal.classList.add('hidden');
     
@@ -544,9 +597,11 @@ function startIntervals() {
         }
     }, 1000);
 
+    // Hazard scaling based on level
+    const boomInterval = Math.max(5000, 12000 - (gameState.level * 800));
     gameState.intervals.boom = setInterval(() => {
         if (!gameState.paused && !gameState.frozen) spawnItem('boom');
-    }, 12000);
+    }, boomInterval);
 
     gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('big', 5000); }, 8000));
     gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('golden', 8000); }, 15000));
