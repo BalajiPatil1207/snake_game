@@ -68,6 +68,7 @@ const elements = {
     quickShopBtn: document.getElementById('quickShopBtn'),
     quickSettingsBtn: document.getElementById('quickSettingsBtn'),
     // Mobile Actions
+    mobilePlayBtn: document.getElementById('mobilePlayBtn'),
     settingsBtn: document.getElementById('settingsBtn'),
     shopBtn: document.getElementById('shopBtn'),
     // Modals
@@ -471,7 +472,10 @@ function startGame() {
     updateDisplayValue('time', '0');
     elements.startOverlay.classList.add('hidden');
     elements.modal.classList.add('hidden');
+    
+    // Sync Play Icons
     elements.quickPlayBtn.textContent = '⏸️';
+    if(elements.mobilePlayBtn) elements.mobilePlayBtn.textContent = '⏸️';
 
     setupGrid();
     loadProgress();
@@ -498,7 +502,10 @@ function endGame() {
     stopIntervals();
     bgMusic.pause();
     bgMusic.currentTime = 0;
+    
+    // Sync Play Icons
     elements.quickPlayBtn.textContent = '▶️';
+    if(elements.mobilePlayBtn) elements.mobilePlayBtn.textContent = '▶️';
     
     elements.finalScore.textContent = gameState.score;
     elements.finalHigh.textContent = gameState.highScore;
@@ -507,10 +514,17 @@ function endGame() {
 }
 
 function togglePause() {
-    if (!gameState.started) return;
+    if (!gameState.started) {
+        startGame();
+        return;
+    };
     gameState.paused = !gameState.paused;
     elements.pauseOverlay.classList.toggle('hidden', !gameState.paused);
-    elements.quickPlayBtn.textContent = gameState.paused ? '▶️' : '⏸️';
+    
+    // Sync Play Icons
+    const icon = gameState.paused ? '▶️' : '⏸️';
+    elements.quickPlayBtn.textContent = icon;
+    if(elements.mobilePlayBtn) elements.mobilePlayBtn.textContent = icon;
     
     if (gameState.paused) {
         bgMusic.pause();
@@ -596,14 +610,13 @@ elements.closeShopBtn.addEventListener('click', () => {
     elements.shopModal.classList.add('hidden');
 });
 
-// Quick Play Toggle
-elements.quickPlayBtn.addEventListener('click', () => {
-    if (!gameState.started) {
-        startGame();
-    } else {
-        togglePause();
-    }
-});
+// Quick Play Toggle (Desktop)
+elements.quickPlayBtn.addEventListener('click', togglePause);
+
+// Mobile Play Toggle
+if(elements.mobilePlayBtn) {
+    elements.mobilePlayBtn.addEventListener('click', togglePause);
+}
 
 // Theme Selector
 document.getElementById('themeSelect').addEventListener('change', (e) => {
