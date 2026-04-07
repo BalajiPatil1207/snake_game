@@ -67,7 +67,7 @@ body {
 /* Base Layout */
 .game-wrapper {
     width: 100%;
-    max-width: 600px;
+    max-width: 900px; /* Increased for desktop sidebar */
     padding: 20px;
     z-index: 10;
 }
@@ -121,6 +121,40 @@ body {
     color: var(--text-primary);
 }
 
+/* Quick Action Bar (Desktop) */
+.quick-action-bar {
+    display: flex;
+    gap: 8px;
+    margin-right: 15px;
+}
+
+.action-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background: var(--accent-color);
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.header-mobile-btns {
+    display: flex;
+    gap: 12px;
+}
+
 /* HUD System */
 .hud {
     display: grid;
@@ -157,16 +191,65 @@ body {
 .coin-card .value { color: #ffd700; }
 .high-card .value { color: var(--warning); }
 
+/* Main Game Layout (Desktop Side-by-Side) */
+.main-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
 /* Game Surface */
 .game-surface {
     position: relative;
-    width: 100%;
+    flex: 1;
     aspect-ratio: 1 / 1;
     background: rgba(0, 0, 0, 0.3);
     border-radius: 16px;
     overflow: hidden;
     border: 2px solid rgba(255, 255, 255, 0.05);
 }
+
+/* Sidebar (Desktop Only) */
+.sidebar {
+    width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sidebar-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--glass-border);
+    padding: 16px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+}
+
+.sidebar-card:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--accent-color);
+}
+
+.sidebar-card .label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.sidebar-card .value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+#sideScore { color: var(--accent-color); }
+#sideCoinCount { color: #ffd700; }
+#sideHighScore { color: var(--warning); }
 
 #game-board {
     width: 100%;

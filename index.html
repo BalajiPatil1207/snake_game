@@ -19,8 +19,15 @@
           <h1>SNAKE <span>PRO</span></h1>
         </div>
         <div class="header-actions">
-          <button id="shopBtn" class="icon-btn" aria-label="Shop">🛒</button>
-          <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙️</button>
+          <div class="quick-action-bar desktop-only">
+            <button id="quickPlayBtn" class="action-btn" title="Play/Pause">▶️</button>
+            <button id="quickShopBtn" class="action-btn" title="Shop">🛒</button>
+            <button id="quickSettingsBtn" class="action-btn" title="Settings">⚙️</button>
+          </div>
+          <div class="mobile-only header-mobile-btns">
+            <button id="shopBtn" class="icon-btn" aria-label="Shop">🛒</button>
+            <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙️</button>
+          </div>
           <div class="theme-select-wrapper">
             <select id="themeSelect">
               <option value="dark">Dark</option>
@@ -31,7 +38,48 @@
         </div>
       </header>
 
-      <div class="hud">
+      <div class="main-layout">
+        <div class="game-surface">
+          <div id="game-board" class="board-canvas" aria-label="Game board"></div>
+          
+          <div id="start-overlay" class="game-overlay">
+            <div class="overlay-content">
+              <h2 class="glow-text">READY?</h2>
+              <p class="desktop-only text-hint">Press <span>[SPACE]</span> or click Start</p>
+              <p class="mobile-only text-hint">Swipe to start</p>
+              <button id="start-button" class="btn btn-primary">START GAME</button>
+            </div>
+          </div>
+
+          <div id="pause-overlay" class="game-overlay hidden">
+            <div class="overlay-content">
+              <h2>PAUSED</h2>
+              <button id="pause-button" class="btn btn-secondary">RESUME</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="sidebar desktop-only">
+          <div class="sidebar-card">
+            <span class="label">SCORE</span>
+            <span id="sideScore" class="value">0</span>
+          </div>
+          <div class="sidebar-card">
+            <span class="label">COINS</span>
+            <span id="sideCoinCount" class="value">0</span>
+          </div>
+          <div class="sidebar-card">
+            <span class="label">TIME</span>
+            <span id="sideTime" class="value">0</span>
+          </div>
+          <div class="sidebar-card">
+            <span class="label">BEST</span>
+            <span id="sideHighScore" class="value">0</span>
+          </div>
+        </aside>
+      </div>
+
+      <div class="hud mobile-only">
         <div class="hud-item score-card">
           <span class="label">SCORE</span>
           <span id="score" class="value">0</span>
@@ -47,26 +95,6 @@
         <div class="hud-item high-card">
           <span class="label">BEST</span>
           <span id="highScore" class="value">0</span>
-        </div>
-      </div>
-
-      <div class="game-surface">
-        <div id="game-board" class="board-canvas" aria-label="Game board"></div>
-        
-        <div id="start-overlay" class="game-overlay">
-          <div class="overlay-content">
-            <h2 class="glow-text">READY?</h2>
-            <p class="desktop-only text-hint">Press <span>[SPACE]</span> or click Start</p>
-            <p class="mobile-only text-hint">Swipe to start</p>
-            <button id="start-button" class="btn btn-primary">START GAME</button>
-          </div>
-        </div>
-
-        <div id="pause-overlay" class="game-overlay hidden">
-          <div class="overlay-content">
-            <h2>PAUSED</h2>
-            <button id="pause-button" class="btn btn-secondary">RESUME</button>
-          </div>
         </div>
       </div>
 
