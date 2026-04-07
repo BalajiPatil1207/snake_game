@@ -3,10 +3,13 @@
  */
 
 // --- CONFIGURATION ---
-const BASE_SPEED = 200;
-const SPEED_MIN = 80;
-const SPEED_STEP = 12;
 const GRID_SIZE_RATIO = 20; // Cells cross-axis
+
+const DIFFICULTY_SETTINGS = {
+    easy: { baseSpeed: 300, speedStep: 8 },
+    medium: { baseSpeed: 200, speedStep: 12 },
+    hard: { baseSpeed: 120, speedStep: 18 }
+};
 
 // --- STATE ---
 let gameState = {
@@ -15,7 +18,7 @@ let gameState = {
     frozen: false,
     score: 0,
     highScore: parseInt(localStorage.getItem("snakeHighScore") || "0"),
-    speed: BASE_SPEED,
+    speed: 200,
     timeLeft: 0,
     direction: 'right',
     prevDirection: 'right',
@@ -23,7 +26,12 @@ let gameState = {
     food: { normal: null, big: null, golden: null, speed: null, freeze: null },
     boom: null,
     intervals: { main: null, time: null, boom: null, fruits: [] },
-    grid: { rows: 0, cols: 0, blocks: {} }
+    grid: { rows: 0, cols: 0, blocks: {} },
+    settings: {
+        sound: true,
+        vibration: true,
+        difficulty: 'medium'
+    }
 };
 
 // --- DOM ELEMENTS ---
@@ -36,11 +44,17 @@ const elements = {
     pauseBtn: document.getElementById('pause-button'),
     restartBtn: document.getElementById('restartBtn'),
     closeBtn: document.getElementById('closeBtn'),
+    settingsBtn: document.getElementById('settingsBtn'),
+    saveSettingsBtn: document.getElementById('saveSettingsBtn'),
     startOverlay: document.getElementById('start-overlay'),
     pauseOverlay: document.getElementById('pause-overlay'),
     modal: document.getElementById('modalOverlay'),
+    settingsModal: document.getElementById('settingsOverlay'),
     finalScore: document.getElementById('finalScore'),
-    finalHigh: document.getElementById('finalHigh')
+    finalHigh: document.getElementById('finalHigh'),
+    soundToggle: document.getElementById('soundToggle'),
+    vibrationToggle: document.getElementById('vibrationToggle'),
+    difficultySelect: document.getElementById('difficultySelect')
 };
 
 // --- AUDIO SYSTEM ---
@@ -51,7 +65,7 @@ bgMusic.loop = true;
 bgMusic.volume = 0.3;
 
 function playTone(freq, type = 'sine', duration = 120, gain = 0.05) {
-    if (!audioCtx) return;
+    if (!audioCtx || !gameState.settings.sound) return;
     const o = audioCtx.createOscillator();
     const g = audioCtx.createGain();
     o.type = type;
@@ -67,6 +81,37 @@ const sounds = {
     hit: () => playTone(120, 'sawtooth', 250),
     boom: () => playTone(80, 'square', 400, 0.15)
 };
+
+// --- VIBRATION SYSTEM ---
+function triggerVibrate(pattern) {
+    if (gameState.settings.vibration && navigator.vibrate) {
+        navigator.vibrate(pattern);
+    }
+}
+
+// --- PERSISTENCE ---
+function loadSettings() {
+    const saved = localStorage.getItem('snakeProSettings');
+    if (saved) {
+        gameState.settings = { ...gameState.settings, ...JSON.parse(saved) };
+        elements.soundToggle.checked = gameState.settings.sound;
+        elements.vibrationToggle.checked = gameState.settings.vibration;
+        elements.difficultySelect.value = gameState.settings.difficulty;
+    }
+}
+
+function saveSettings() {
+    gameState.settings.sound = elements.soundToggle.checked;
+    gameState.settings.vibration = elements.vibrationToggle.checked;
+    gameState.settings.difficulty = elements.difficultySelect.value;
+    localStorage.setItem('snakeProSettings', JSON.stringify(gameState.settings));
+    
+    if (!gameState.settings.sound) {
+        bgMusic.pause();
+    } else if (gameState.started && !gameState.paused) {
+        bgMusic.play().catch(() => {});
+    }
+}
 
 // --- GRID ENGINE ---
 function setupGrid() {
@@ -99,7 +144,7 @@ function spawnItem(type, timeout = null) {
         x = Math.floor(Math.random() * gameState.grid.rows);
         y = Math.floor(Math.random() * gameState.grid.cols);
         attempts++;
-        if(attempts > 100) return; // Prevent infinite loop on full board
+        if(attempts > 100) return; 
     } while (isOccupied(x, y));
 
     if (type === 'boom') {
@@ -124,7 +169,6 @@ function isOccupied(x, y) {
     if (gameState.snake.some(s => s.x === x && s.y === y)) return true;
     if (gameState.food.normal && gameState.food.normal.x === x && gameState.food.normal.y === y) return true;
     if (gameState.boom && gameState.boom.x === x && gameState.boom.y === y) return true;
-    // Check other special fruits...
     return Object.values(gameState.food).some(f => f && f.x === x && f.y === y);
 }
 
@@ -143,12 +187,14 @@ function moveSnake() {
     if (head.x < 0 || head.x >= gameState.grid.rows || head.y < 0 || head.y >= gameState.grid.cols ||
         gameState.snake.some(s => s.x === head.x && s.y === head.y)) {
         sounds.hit();
+        triggerVibrate([100, 50, 100]);
         return endGame();
     }
 
     // Boom Collision
     if (gameState.boom && head.x === gameState.boom.x && head.y === gameState.boom.y) {
         sounds.boom();
+        triggerVibrate([200]);
         return endGame();
     }
 
@@ -158,7 +204,8 @@ function moveSnake() {
     let ate = false;
     if (gameState.food.normal && head.x === gameState.food.normal.x && head.y === gameState.food.normal.y) {
         updateScore(5);
-        gameState.speed = Math.max(SPEED_MIN, gameState.speed - SPEED_STEP);
+        const diff = DIFFICULTY_SETTINGS[gameState.settings.difficulty];
+        gameState.speed = Math.max(50, gameState.speed - diff.speedStep);
         resetMainInterval();
         spawnItem('normal');
         ate = true;
@@ -181,7 +228,10 @@ function moveSnake() {
     }
 
     if (!ate) gameState.snake.pop();
-    if (ate) sounds.eat();
+    if (ate) {
+        sounds.eat();
+        triggerVibrate(30);
+    }
 
     draw();
 }
@@ -198,7 +248,7 @@ function updateScore(pts) {
 
 function triggerSpeedBoost() {
     const currentSpeed = gameState.speed;
-    gameState.speed = Math.max(SPEED_MIN, Math.floor(gameState.speed * 0.6));
+    gameState.speed = Math.max(50, Math.floor(gameState.speed * 0.6));
     resetMainInterval();
     setTimeout(() => {
         gameState.speed = currentSpeed;
@@ -215,12 +265,10 @@ function triggerFreezeEffect() {
 
 // --- RENDER SYSTEM ---
 function draw() {
-    // Clear board classes
     Object.values(gameState.grid.blocks).forEach(b => {
         b.className = "block";
     });
 
-    // Draw snake
     gameState.snake.forEach((segment, i) => {
         const key = `${segment.x}-${segment.y}`;
         if (gameState.grid.blocks[key]) {
@@ -228,7 +276,6 @@ function draw() {
         }
     });
 
-    // Draw items
     if (gameState.food.normal) addClass(gameState.food.normal, "apple");
     if (gameState.food.big) addClass(gameState.food.big, "big-apple");
     if (gameState.food.golden) addClass(gameState.food.golden, "golden-apple");
@@ -296,12 +343,14 @@ elements.board.addEventListener('touchend', e => {
 function startGame() {
     if (gameState.started) return;
 
-    // Reset State
+    loadSettings();
+    const diff = DIFFICULTY_SETTINGS[gameState.settings.difficulty];
+
     gameState.started = true;
     gameState.paused = false;
     gameState.score = 0;
     gameState.timeLeft = 0;
-    gameState.speed = BASE_SPEED;
+    gameState.speed = diff.baseSpeed;
     gameState.direction = 'right';
     gameState.prevDirection = 'right';
     gameState.food = { normal: null, big: null, golden: null, speed: null, freeze: null };
@@ -327,7 +376,9 @@ function startGame() {
     startIntervals();
     
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-    bgMusic.play().catch(() => {});
+    if (gameState.settings.sound) {
+        bgMusic.play().catch(() => {});
+    }
 }
 
 function endGame() {
@@ -346,8 +397,11 @@ function togglePause() {
     if (!gameState.started) return;
     gameState.paused = !gameState.paused;
     elements.pauseOverlay.classList.toggle('hidden', !gameState.paused);
-    if (gameState.paused) bgMusic.pause();
-    else bgMusic.play().catch(() => {});
+    if (gameState.paused) {
+        bgMusic.pause();
+    } else {
+        if (gameState.settings.sound) bgMusic.play().catch(() => {});
+    }
 }
 
 // --- INTERVAL MANAGEMENT ---
@@ -365,7 +419,6 @@ function startIntervals() {
         if (!gameState.paused && !gameState.frozen) spawnItem('boom');
     }, 12000);
 
-    // Fruit schedules
     gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('big', 5000); }, 8000));
     gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('golden', 8000); }, 15000));
     gameState.intervals.fruits.push(setInterval(() => { if(shouldSpawn()) spawnItem('speed', 6000); }, 20000));
@@ -403,12 +456,24 @@ elements.pauseBtn.addEventListener('click', togglePause);
 elements.restartBtn.addEventListener('click', startGame);
 elements.closeBtn.addEventListener('click', () => elements.modal.classList.add('hidden'));
 
+// Settings Event Listeners
+elements.settingsBtn.addEventListener('click', () => {
+    loadSettings();
+    elements.settingsModal.classList.remove('hidden');
+});
+
+elements.saveSettingsBtn.addEventListener('click', () => {
+    saveSettings();
+    elements.settingsModal.classList.add('hidden');
+});
+
 // Theme Selector
 document.getElementById('themeSelect').addEventListener('change', (e) => {
     document.body.setAttribute('data-theme', e.target.value);
 });
 
 // Initialization
+loadSettings();
 setupGrid();
 window.addEventListener('resize', () => {
     if (!gameState.started) setupGrid();

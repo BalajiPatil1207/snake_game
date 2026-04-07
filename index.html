@@ -19,6 +19,7 @@
           <h1>SNAKE <span>PRO</span></h1>
         </div>
         <div class="header-actions">
+          <button id="settingsBtn" class="icon-btn" aria-label="Settings">⚙️</button>
           <div class="theme-select-wrapper">
             <select id="themeSelect">
               <option value="dark">Dark</option>
@@ -95,5 +96,43 @@
   </div>
 
   <script src="script.js"></script>
+
+  <!-- Settings Modal -->
+  <div id="settingsOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal glass settings-modal">
+      <div class="modal-header">
+        <h2>SETTINGS</h2>
+      </div>
+      <div class="modal-body settings-grid">
+        <div class="setting-item">
+          <span class="setting-label">Sound FX</span>
+          <label class="switch">
+            <input type="checkbox" id="soundToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">Vibration</span>
+          <label class="switch">
+            <input type="checkbox" id="vibrationToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">Difficulty</span>
+          <div class="difficulty-select-wrapper">
+            <select id="difficultySelect">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="saveSettingsBtn" class="btn btn-primary">SAVE & CLOSE</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
