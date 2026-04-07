@@ -48,17 +48,29 @@ let gameState = {
 // --- DOM ELEMENTS ---
 const elements = {
     board: document.getElementById('game-board'),
+    // Mobile HUD
     score: document.getElementById('score'),
     coinCount: document.getElementById('coinCount'),
-    shopCoinCount: document.getElementById('shopCoinCount'),
     time: document.getElementById('time'),
     highScore: document.getElementById('highScore'),
+    // Desktop Sidebar
+    sideScore: document.getElementById('sideScore'),
+    sideCoinCount: document.getElementById('sideCoinCount'),
+    sideTime: document.getElementById('sideTime'),
+    sideHighScore: document.getElementById('sideHighScore'),
+    // Controls
     startBtn: document.getElementById('start-button'),
     pauseBtn: document.getElementById('pause-button'),
     restartBtn: document.getElementById('restartBtn'),
     closeBtn: document.getElementById('closeBtn'),
+    // Desktop Quick Actions
+    quickPlayBtn: document.getElementById('quickPlayBtn'),
+    quickShopBtn: document.getElementById('quickShopBtn'),
+    quickSettingsBtn: document.getElementById('quickSettingsBtn'),
+    // Mobile Actions
     settingsBtn: document.getElementById('settingsBtn'),
     shopBtn: document.getElementById('shopBtn'),
+    // Modals
     saveSettingsBtn: document.getElementById('saveSettingsBtn'),
     closeShopBtn: document.getElementById('closeShopBtn'),
     startOverlay: document.getElementById('start-overlay'),
@@ -67,11 +79,13 @@ const elements = {
     settingsModal: document.getElementById('settingsOverlay'),
     shopModal: document.getElementById('shopOverlay'),
     skinGallery: document.getElementById('skinGallery'),
+    // Overlays
     finalScore: document.getElementById('finalScore'),
     finalHigh: document.getElementById('finalHigh'),
     soundToggle: document.getElementById('soundToggle'),
     vibrationToggle: document.getElementById('vibrationToggle'),
-    difficultySelect: document.getElementById('difficultySelect')
+    difficultySelect: document.getElementById('difficultySelect'),
+    shopCoinCount: document.getElementById('shopCoinCount')
 };
 
 // --- AUDIO SYSTEM ---
@@ -107,10 +121,17 @@ function triggerVibrate(pattern) {
     }
 }
 
-// --- PERSISTENCE ---
+// --- PERSISTENCE & SYNC ---
+function updateDisplayValue(key, val) {
+    const el = elements[key];
+    const sideEl = elements[`side${key.charAt(0).toUpperCase() + key.slice(1)}`];
+    if (el) el.textContent = val;
+    if (sideEl) sideEl.textContent = val;
+}
+
 function loadProgress() {
-    elements.coinCount.textContent = gameState.coins;
-    elements.highScore.textContent = gameState.highScore;
+    updateDisplayValue('coinCount', gameState.coins);
+    updateDisplayValue('highScore', gameState.highScore);
 }
 
 function saveProgress() {
@@ -181,7 +202,7 @@ function buySkin(skin) {
         sounds.buy();
         saveProgress();
         renderShop();
-        elements.coinCount.textContent = gameState.coins;
+        updateDisplayValue('coinCount', gameState.coins);
     } else {
         triggerVibrate([50, 50]);
         alert("Not enough coins! 🐍💰");
@@ -321,15 +342,15 @@ function moveSnake() {
 function updateGameStats(scorePts, coinPts) {
     // Score
     gameState.score += scorePts;
-    elements.score.textContent = gameState.score;
+    updateDisplayValue('score', gameState.score);
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
-        elements.highScore.textContent = gameState.highScore;
+        updateDisplayValue('highScore', gameState.highScore);
     }
 
     // Coins
     gameState.coins += coinPts;
-    elements.coinCount.textContent = gameState.coins;
+    updateDisplayValue('coinCount', gameState.coins);
     
     saveProgress();
 }
@@ -446,10 +467,11 @@ function startGame() {
     gameState.food = { normal: null, big: null, golden: null, speed: null, freeze: null };
     gameState.boom = null;
 
-    elements.score.textContent = "0";
-    elements.time.textContent = "0";
+    updateDisplayValue('score', '0');
+    updateDisplayValue('time', '0');
     elements.startOverlay.classList.add('hidden');
     elements.modal.classList.add('hidden');
+    elements.quickPlayBtn.textContent = '⏸️';
 
     setupGrid();
     loadProgress();
@@ -476,6 +498,7 @@ function endGame() {
     stopIntervals();
     bgMusic.pause();
     bgMusic.currentTime = 0;
+    elements.quickPlayBtn.textContent = '▶️';
     
     elements.finalScore.textContent = gameState.score;
     elements.finalHigh.textContent = gameState.highScore;
@@ -487,6 +510,8 @@ function togglePause() {
     if (!gameState.started) return;
     gameState.paused = !gameState.paused;
     elements.pauseOverlay.classList.toggle('hidden', !gameState.paused);
+    elements.quickPlayBtn.textContent = gameState.paused ? '▶️' : '⏸️';
+    
     if (gameState.paused) {
         bgMusic.pause();
     } else {
@@ -501,7 +526,7 @@ function startIntervals() {
     gameState.intervals.time = setInterval(() => {
         if (!gameState.paused && !gameState.frozen) {
             gameState.timeLeft++;
-            elements.time.textContent = gameState.timeLeft;
+            updateDisplayValue('time', gameState.timeLeft);
         }
     }, 1000);
 
@@ -547,10 +572,12 @@ elements.restartBtn.addEventListener('click', startGame);
 elements.closeBtn.addEventListener('click', () => elements.modal.classList.add('hidden'));
 
 // Settings Event Listeners
-elements.settingsBtn.addEventListener('click', () => {
+const openSettings = () => {
     loadSettings();
     elements.settingsModal.classList.remove('hidden');
-});
+};
+elements.settingsBtn.addEventListener('click', openSettings);
+elements.quickSettingsBtn.addEventListener('click', openSettings);
 
 elements.saveSettingsBtn.addEventListener('click', () => {
     saveSettings();
@@ -558,13 +585,24 @@ elements.saveSettingsBtn.addEventListener('click', () => {
 });
 
 // Shop Event Listeners
-elements.shopBtn.addEventListener('click', () => {
+const openShop = () => {
     renderShop();
     elements.shopModal.classList.remove('hidden');
-});
+};
+elements.shopBtn.addEventListener('click', openShop);
+elements.quickShopBtn.addEventListener('click', openShop);
 
 elements.closeShopBtn.addEventListener('click', () => {
     elements.shopModal.classList.add('hidden');
+});
+
+// Quick Play Toggle
+elements.quickPlayBtn.addEventListener('click', () => {
+    if (!gameState.started) {
+        startGame();
+    } else {
+        togglePause();
+    }
 });
 
 // Theme Selector

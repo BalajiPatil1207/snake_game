@@ -155,7 +155,7 @@ body {
     gap: 12px;
 }
 
-/* HUD System */
+/* HUD System (Mobile) */
 .hud {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -701,7 +701,28 @@ input:checked + .slider:before {
     outline: none;
 }
 
+/* Utility */
+.hidden { display: none !important; }
+
 /* Responsive adjustments */
+@media (max-width: 1024px) {
+    .game-wrapper {
+        max-width: 600px;
+    }
+    .main-layout {
+        flex-direction: column;
+    }
+    .desktop-only {
+        display: none !important;
+    }
+    .mobile-only {
+        display: block !important;
+    }
+    .hud.mobile-only {
+        display: grid !important;
+    }
+}
+
 @media (max-width: 480px) {
     .game-wrapper { padding: 10px; }
     .game-container { padding: 16px; border-radius: 20px; }
@@ -713,13 +734,7 @@ input:checked + .slider:before {
 .desktop-only { display: block; }
 .mobile-only { display: none; }
 
-@media (max-pointer: coase) {
-    .desktop-only { display: none; }
-    .mobile-only { display: block; }
-}
-
-/* Additional check for mobile */
-@media (max-width: 768px) {
-    .desktop-only { display: none; }
-    .mobile-only { display: block; }
+@media (pointer: coarse) {
+    .desktop-only { display: none !important; }
+    .mobile-only { display: block !important; }
 }
