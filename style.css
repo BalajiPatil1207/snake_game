@@ -104,28 +104,51 @@ body {
     text-shadow: 0 0 10px var(--accent-glow);
 }
 
-.theme-select-wrapper select {
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.theme-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     background: rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
     border: 1px solid var(--glass-border);
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    outline: none;
+    padding: 4px 8px;
+    border-radius: 10px;
     transition: all 0.3s ease;
 }
 
-.theme-select-wrapper select:hover {
+.theme-select-wrapper:hover {
     background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent-color);
+}
+
+.theme-icon {
+    font-size: 0.9rem;
+}
+
+.theme-select-wrapper select {
+    background: transparent;
     color: var(--text-primary);
+    border: none;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    outline: none;
+}
+
+.theme-select-wrapper select option {
+    background: #1e293b;
+    color: #fff;
 }
 
 /* Quick Action Bar (Desktop) */
 .quick-action-bar {
     display: flex;
     gap: 8px;
-    margin-right: 15px;
 }
 
 .action-btn {
@@ -720,6 +743,18 @@ input:checked + .slider:before {
     .desktop-only {
         display: none !important;
     }
+    
+    .app-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
     /* Fixed: Preserving flex/grid for specific mobile components */
     .mobile-only:not(.hud):not(.header-mobile-btns) {
         display: block !important;
